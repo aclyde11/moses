@@ -21,7 +21,7 @@ class VAETrainer(MosesTrainer):
 
         def collate(data):
             data.sort(key=len, reverse=True)
-            tensors = [model.string2tensor(string, device=device)
+            tensors = [model.module.string2tensor(string, device=device)
                        for string in data]
 
             return tensors
@@ -118,7 +118,7 @@ class VAETrainer(MosesTrainer):
             if (self.config.model_save is not None) and \
                     (epoch % self.config.save_frequency == 0):
                 model = model.to('cpu')
-                torch.save(model.state_dict(),
+                torch.save(model.module.state_dict(),
                            self.config.model_save[:-3] +
                            '_{0:03d}.pt'.format(epoch))
                 model = model.to(device)
@@ -128,6 +128,7 @@ class VAETrainer(MosesTrainer):
 
     def fit(self, model, train_data, val_data=None):
         logger = Logger() if self.config.log_file is not None else None
+        model = torch.nn.DataParallel(model)
 
         train_loader = self.get_dataloader(model, train_data, shuffle=True)
         val_loader = None if val_data is None else self.get_dataloader(
